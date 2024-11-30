@@ -1,0 +1,89 @@
+import sqlite3
+import db.dbConst as dbConst
+
+class Actor:
+
+    sqlFields: str = "NAME, DESCRIPTION, ARMORCLASS, HITPOINTS, AVERAGESAVE, TOHITBONUS, SAVEDC, BASEDPR, MAXDPR"
+
+    def __init__(self, id: int, name: str, description: str, armorClass: int, hitPoints: int, averageSave: float, toHitBonus: int, saveDC: int, baseDPR: float, maxDPR: float):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.armorClass  = armorClass
+        self.hitPoints = hitPoints
+        self.averageSave = averageSave
+        self.toHitBonus = toHitBonus
+        self.saveDC = saveDC
+        self.baseDPR = baseDPR
+        self.maxDPR = maxDPR
+    
+    def fromQuery(actor_id: int):
+        try:
+            conn = sqlite3.connect(dbConst.dbPath)
+            cur = conn.cursor()
+
+            cur.execute("SELECT " + Actor.sqlFields +  " FROM ACTORS WHERE ID = ?", (actor_id))
+            row = tuple(cur.fetchone())
+            
+            if row is None:
+                raise ValueError(f"No Actor found with id: {actor_id}.")
+            
+            name, description, armorClass, hitPoints, averageSave, toHitBonus, saveDC, baseDPR, maxDPR = row
+
+            return Actor(name=name, description=description, armorClass=armorClass, hitPoints=hitPoints, averageSave=averageSave, toHitBonus=toHitBonus, saveDC=saveDC, baseDPR=baseDPR, maxDPR=maxDPR)
+
+        except sqlite3.Error as e:
+            raise Exception(f"SQLite error: {e}")
+            
+        finally:
+            if conn:
+                conn.close()
+
+    def fromDictionary(data: dict[str, any]):
+        name = data.get('name', None)
+        description = data.get('description', None)
+        armorClass = data.get('armorClass', None)
+        hitPoints = data.get('hitPoints', None)
+        averageSave = data.get('averageSave', None)
+        toHitBonus = data.get('toHitBonus', None)
+        saveDC = data.get('saveDC', None)
+        baseDPR = data.get('baseDPR', None)
+        maxDPR = data.get('maxDPR', None)
+
+        return Actor(name=name, description=description, armorClass=armorClass, hitPoints=hitPoints, averageSave=averageSave, toHitBonus=toHitBonus, saveDC=saveDC, baseDPR=baseDPR, maxDPR=maxDPR)
+
+    def insertActorDirect(self) -> None:
+        try:
+            conn = sqlite3.connect(dbConst.dbPath)
+            cur = conn.cursor()
+
+            cur.execute("INSERT INTO ACTORS ( " + Actor.sqlFields + " ) VALUES (?,?,?)",
+                         (self.name, self.description, self.armorClass, self.hitPoints, self.averageSave, self.toHitBonus, self.saveDC, self.baseDPR, self.maxDPR))
+            
+            conn.commit()
+        
+        except sqlite3.Error as e:
+            raise Exception(f"SQLite error: {e}")
+            
+        finally:
+            if conn:
+                conn.close()
+
+    def updateActorDirect(self, id: int):
+        try:
+            conn = sqlite3.connect(dbConst.dbPath)
+            cur = conn.cursor()
+
+            cur.execute('''UPDATE ACTORS SET 
+                        NAME = ?, DESCRIPTION = ?, ARMORCLASS = ?, HITPOINTS = ?, AVERAGESAVE = ?, TOHITBONUS = ?, SAVEDC = ?, BASEDPR = ?, MAXDPR = ? 
+                        WHERE ID = ?''',
+                         (self.name, self.description, self.armorClass, self.hitPoints, self.averageSave, self.toHitBonus, self.saveDC, self.baseDPR, self.maxDPR, id))
+
+            conn.commit()
+        
+        except sqlite3.Error as e:
+            raise Exception(f"SQLite error: {e}")
+            
+        finally:
+            if conn:
+                conn.close()
