@@ -1,15 +1,26 @@
 import sqlite3
-import db.dbConst as dbConst
+import json
+import src.db.dbConst as dbConst
+from typing import Dict
+
+def getDefaultAC(jsonDict: Dict) -> int:
+    pass  
+
+def getUnarmoredMonkAC(jsonDict: Dict) -> int:
+    pass  
+
+def getUnarmoredBarbarianAC(jsonDict: Dict) -> int:
+    pass
 
 class Actor:
 
     sqlFields: str = "NAME, DESCRIPTION, ARMORCLASS, HITPOINTS, AVERAGESAVE, TOHITBONUS, SAVEDC, BASEDPR, MAXDPR"
 
-    def __init__(self, id: int, name: str, description: str, armorClass: int, hitPoints: int, averageSave: float, toHitBonus: int, saveDC: int, baseDPR: float, maxDPR: float):
+    def __init__(self, id=0, name="Name", description="Description", armorClass=10, hitPoints=10, averageSave=0.0, toHitBonus=0, saveDC=0, baseDPR=0.0, maxDPR=0.0):
         self.id = id
         self.name = name
         self.description = description
-        self.armorClass  = armorClass
+        self.armorClass = armorClass
         self.hitPoints = hitPoints
         self.averageSave = averageSave
         self.toHitBonus = toHitBonus
@@ -53,21 +64,15 @@ class Actor:
         return Actor(name=name, description=description, armorClass=armorClass, hitPoints=hitPoints, averageSave=averageSave, toHitBonus=toHitBonus, saveDC=saveDC, baseDPR=baseDPR, maxDPR=maxDPR)
 
     def insertActorDirect(self) -> None:
-        try:
-            conn = sqlite3.connect(dbConst.dbPath)
-            cur = conn.cursor()
 
-            cur.execute("INSERT INTO ACTORS ( " + Actor.sqlFields + " ) VALUES (?,?,?)",
-                         (self.name, self.description, self.armorClass, self.hitPoints, self.averageSave, self.toHitBonus, self.saveDC, self.baseDPR, self.maxDPR))
-            
-            conn.commit()
-        
+        try:
+            with sqlite3.connect(dbConst.dbPath) as conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO ACTORS ( " + Actor.sqlFields + " ) VALUES (?,?,?,?,?,?,?,?,?)", (self.name, self.description, self.armorClass, self.hitPoints, self.averageSave, self.toHitBonus, self.saveDC, self.baseDPR, self.maxDPR))
+                
         except sqlite3.Error as e:
             raise Exception(f"SQLite error: {e}")
             
-        finally:
-            if conn:
-                conn.close()
 
     def updateActorDirect(self, id: int):
         try:
@@ -87,3 +92,33 @@ class Actor:
         finally:
             if conn:
                 conn.close()
+
+    def fromJsonFile(jsonFilePath: str):
+        try:
+            with open(jsonFilePath, "r") as file:
+                actorJsonDict = json.load(file)
+
+        except Exception as e:
+            print(f"si è verificato un errore durante l'import del file Json.")
+    
+    def mapJsonDict(jsonDict: Dict) -> Dict:
+        pass
+
+    def getArmorClass(jsonDict: Dict) -> int:
+        jsonFlatAc: int = jsonDict["system"]["attributes"]["ac"]["flat"]
+        if jsonFlatAc != None:
+            return jsonFlatAc
+        
+        jsonAcCalc: str = jsonDict["system"]["attributes"]["ac"]["calc"]
+        match jsonAcCalc:
+            case "default":
+                return getDefaultAC(jsonDict)
+            case "unarmoredMonk":
+                return getUnarmoredMonkAC(jsonDict)
+            case "unarmoredBarbarian":
+                return getUnarmoredBarbarianAC(jsonDict)
+            case _:
+                raise Exception("calcolo classe armatura sconosciuto o da implementare.")
+
+
+            

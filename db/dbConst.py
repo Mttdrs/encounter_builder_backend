@@ -1,1 +1,0 @@
-dbPath = str("db/encounterBuilder.db")
