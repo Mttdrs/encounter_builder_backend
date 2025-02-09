@@ -1,17 +1,44 @@
 import sqlite3
 import json
+import math 
 import src.db.dbConst as dbConst
 from typing import Dict
 
-def getDefaultAC(jsonDict: Dict) -> int:
-    pass  
+def getDefaultEquippedArmorAC(jsonDict: Dict) -> int:
+    # presumi che la scheda sia stata compilata correttamente e che l'equip abbia senso
+    # Trova in items[] tutti gli oggetti che abbiano armor.value != null (possono essere armature, scudi o altri oggetti che diano bonus alla CA)
+    # Trova in questa lista l'armatura (presumiamo sia solo una) e determina: AC base, max Dex, eventuali bonus.
+    # Per ciascun altro oggetto nella lista, somma il valore di AC e aggingilo alla formula: Base + min(Dex | max Dex) + magical bonus + other bonuses
+
+    # items.system.attunement = "required"? per tutti gli oggetti che danno AC
+    # effects.changes.key = "system.attributes.ac.bonus"
+        # effects.changes.value (convertire stringa a int)
+    # items.system.type.value = "shield" per gli scudi
+    #
+
+    # TEST: RETURN 1
+    return 1
 
 def getUnarmoredMonkAC(jsonDict: Dict) -> int:
-    pass  
+    dexMod = int(math.floor((jsonDict[system][abilities][dex][value] - 10) / 2))
+    wisMod = int(math.floor((jsonDict[system][abilities][wis][value] - 10) / 2))
+    return 10 + dexMod + wisMod
 
 def getUnarmoredBarbarianAC(jsonDict: Dict) -> int:
-    pass
+    dexMod = int(math.floor((jsonDict[system][abilities][dex][value] - 10) / 2))
+    conMod = int(math.floor((jsonDict[system][abilities][con][value] - 10) / 2))
+    return 10 + dexMod + conMod
 
+def getUnarmoredBardAC(jsonDict: Dict) -> int:
+    dexMod = int(math.floor((jsonDict[system][abilities][dex][value] - 10) / 2))
+    chaMod = int(math.floor((jsonDict[system][abilities][cha][value] - 10) / 2))
+    return 10 + dexMod + chaMod
+
+def getMageArmorDraconicResilienceAC(jsonDict: Dict) -> int:
+    dexMod = int(math.floor((jsonDict[system][abilities][dex][value] - 10) / 2))
+    return 13 + dexMod
+
+    
 class Actor:
 
     sqlFields: str = "NAME, DESCRIPTION, ARMORCLASS, HITPOINTS, AVERAGESAVE, TOHITBONUS, SAVEDC, BASEDPR, MAXDPR"
@@ -73,7 +100,6 @@ class Actor:
         except sqlite3.Error as e:
             raise Exception(f"SQLite error: {e}")
             
-
     def updateActorDirect(self, id: int):
         try:
             conn = sqlite3.connect(dbConst.dbPath)
@@ -109,16 +135,20 @@ class Actor:
         if jsonFlatAc != None:
             return jsonFlatAc
         
+        
         jsonAcCalc: str = jsonDict["system"]["attributes"]["ac"]["calc"]
         match jsonAcCalc:
-            case "default":
-                return getDefaultAC(jsonDict)
+            case "unarmoredBard":
+                return getUnarmoredBardAC(jsonDict)
             case "unarmoredMonk":
                 return getUnarmoredMonkAC(jsonDict)
             case "unarmoredBarbarian":
                 return getUnarmoredBarbarianAC(jsonDict)
+            case "mage" | "draconic":
+                return getMageArmorDraconicResilienceAC(jsonDict)
             case _:
-                raise Exception("calcolo classe armatura sconosciuto o da implementare.")
+                return getDefaultEquippedArmorAC(jsonDict)
+                
 
 
             
